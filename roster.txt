@@ -1,0 +1,6 @@
+Date,Player 1,Player 2,Player 3,Player 4,Off
+2026-09-13,Alice,Bob,Charlie,David,Eve
+2026-09-20,Bob,Charlie,David,Eve,Alice
+2026-09-27,Charlie,David,Eve,Alice,Bob
+2026-10-04,David,Eve,Alice,Bob,Charlie
+2026-10-11,Eve,Alice,Bob,Charlie,David

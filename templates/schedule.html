@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schedule - Duluth Majors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full bg-white p-8 rounded-xl shadow-2xl border border-gray-100 text-center">
+
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-4">
+            League Schedule
+        </h1>
+        <h2 class="text-2xl font-semibold text-indigo-600 mb-8">
+            Duluth Majors at the Incline Station
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-indigo-600 text-white">
+                        <th class="p-4 rounded-tl-lg font-bold">Date</th>
+                        <th class="p-4 font-bold">Player 1</th>
+                        <th class="p-4 font-bold">Player 2</th>
+                        <th class="p-4 font-bold">Player 3</th>
+                        <th class="p-4 font-bold">Player 4</th>
+                        <th class="p-4 rounded-tr-lg font-bold text-red-300">Night Off</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for week in roster %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-4 font-medium text-gray-900">{{ week.Date }}</td>
+                        <td class="p-4 text-gray-600">{{ week['Player 1'] }}</td>
+                        <td class="p-4 text-gray-600">{{ week['Player 2'] }}</td>
+                        <td class="p-4 text-gray-600">{{ week['Player 3'] }}</td>
+                        <td class="p-4 text-gray-600">{{ week['Player 4'] }}</td>
+                        <td class="p-4 font-bold text-red-500">{{ week.Off }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not roster %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-gray-500 italic">
+                            No schedule available at this time.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <p class="mt-12 text-sm text-gray-400">
+            &copy; 2026 KG Construction | Duluth Majors
+        </p>
+    </div>
+</body>
+</html>
