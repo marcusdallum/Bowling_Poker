@@ -13,7 +13,7 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl w-full bg-white p-8 rounded-xl shadow-2xl border border-gray-100 text-center">
+    <div class="max-w-4xl w-full bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-100 text-center">
 
         <h1 class="text-4xl font-extrabold text-gray-900 mb-4">
             League Schedule
@@ -22,7 +22,8 @@
             Duluth Majors at the Incline Station
         </h2>
 
-        <div class="overflow-x-auto">
+        <!-- Desktop View: Table -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-indigo-600 text-white">
@@ -45,15 +46,31 @@
                         <td class="p-4 font-bold text-red-500">{{ week.Off }}</td>
                     </tr>
                     {% endfor %}
-                    {% if not roster %}
-                    <tr>
-                        <td colspan="6" class="p-8 text-center text-gray-500 italic">
-                            No schedule available at this time.
-                        </td>
-                    </tr>
-                    {% endif %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile View: Cards -->
+        <div class="md:hidden space-y-6">
+            {% for week in roster %}
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-left shadow-sm">
+                <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-3">
+                    <span class="font-bold text-gray-900">{{ week.Date }}</span>
+                    <span class="text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded uppercase">Off: {{ week.Off }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="text-sm text-gray-600">🎳 {{ week['Player 1'] }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week['Player 2'] }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week['Player 3'] }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week['Player 4'] }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not roster %}
+            <div class="text-center py-8 text-gray-500 italic">
+                No schedule available at this time.
+            </div>
+            {% endif %}
         </div>
 
         <p class="mt-12 text-sm text-gray-400">
