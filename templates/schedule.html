@@ -37,8 +37,13 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for week in roster %}
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="p-4 font-medium text-gray-900">{{ week.Date }}</td>
+                    <tr class="transition-colors {% if week.status == 'current' %}bg-yellow-50 ring-2 ring-inset ring-yellow-400{% elif week.status == 'past' %}bg-gray-100 opacity-60{% else %}hover:bg-gray-50{% endif %}">
+                        <td class="p-4 font-medium text-gray-900">
+                            {{ week.Date }}
+                            {% if week.status == 'current' %}
+                            <span class="ml-2 text-xs font-bold text-yellow-600 uppercase">This Week</span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 text-gray-600">{{ week['Player 1'] }}</td>
                         <td class="p-4 text-gray-600">{{ week['Player 2'] }}</td>
                         <td class="p-4 text-gray-600">{{ week['Player 3'] }}</td>
@@ -53,9 +58,14 @@
         <!-- Mobile View: Cards -->
         <div class="md:hidden space-y-6">
             {% for week in roster %}
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-left shadow-sm">
+            <div class="rounded-xl p-4 text-left shadow-sm transition-all {% if week.status == 'current' %}bg-yellow-50 border-2 border-yellow-400{% elif week.status == 'past' %}bg-gray-100 border border-gray-200 opacity-60{% else %}bg-gray-50 border border-gray-200{% endif %}">
                 <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-3">
-                    <span class="font-bold text-gray-900">{{ week.Date }}</span>
+                    <div>
+                        <span class="font-bold text-gray-900">{{ week.Date }}</span>
+                        {% if week.status == 'current' %}
+                        <span class="ml-2 text-xs font-bold text-yellow-600 uppercase">This Week</span>
+                        {% endif %}
+                    </div>
                     <span class="text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded uppercase">Off: {{ week.Off }}</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
