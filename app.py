@@ -222,12 +222,10 @@ def edit_roster():
 def enter_scores():
     if request.method == "POST":
         roster_id = request.form.get("roster_id")
-        card_winner = request.form.get("card_winner")
-        
         if not roster_id:
             flash("Please select a week.", "error")
             return redirect(url_for("enter_scores"))
-            
+        
         try:
             roster_id = int(roster_id)
             entry = database.get_roster_by_id(roster_id)
@@ -235,23 +233,25 @@ def enter_scores():
                 flash("Roster entry not found.", "error")
                 return redirect(url_for("enter_scores"))
             
-            # Get players in order
             players = [entry['p1'], entry['p2'], entry['p3'], entry['p4']]
             
-            # Save bowling scores
-            for i in range(4):
-                score_val = request.form.get(f"score_{i}")
-                if score_val is not None:
-                    database.save_score(roster_id, players[i], int(score_val))
-            
-            # Save card game winner
-            if card_winner:
-                database.save_winner(roster_id, card_winner, "Card Game")
+            # Save scores and winners for 3 games
+            for g in range(1, 4):
+                # Save scores for players in game g
+                for i in range(4):
+                    score_val = request.form.get(f"score_{g}_{i}")
+                    if score_val is not None and score_val != '':
+                        database.save_score(roster_id, players[i], int(score_val), g)
                 
-            flash("Results saved successfully!", "success")
+                # Save card winner for game g
+                card_winner = request.form.get(f"card_winner_{g}")
+                if card_winner:
+                    database.save_winner(roster_id, card_winner, "Card Game", g)
+            
+            flash("Results for all 3 games saved successfully!", "success")
         except Exception as e:
             flash(f"Error saving results: {str(e)}", "error")
-            
+        
         return redirect(url_for("enter_scores"))
 
     # GET request
@@ -262,7 +262,5 @@ def enter_scores():
     
     roster = database.get_all_rosters()
     return render_template("admin_results.html", roster=roster, entry=entry, selected_id=selected_id)
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,84 +1,90 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enter Weekly Results - Admin</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enter Results | Duluth Majors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f8f9fa; padding-top: 20px; }
-        .results-container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .form-label { font-weight: bold; font-size: 1.1rem; }
-        .form-control-lg { font-size: 1.2rem; }
-        .player-row { margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
-        .player-name { flex: 1; font-size: 1.1rem; }
-        .score-input { width: 120px !important; text-align: center; }
-        .btn-save { width: 100%; padding: 15px; font-size: 1.2rem; margin-top: 20px; }
+        body {
+            background-color: #f8f9fa;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="results-container">
-            <h2 class="text-center mb-4">Weekly Results</h2>
+<body class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl w-full bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-100">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Enter Weekly Results</h1>
+            <p class="text-gray-500">Record bowling scores and card game winners for 3 games.</p>
+        </header>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="mb-6 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} text-center font-medium">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-            <form method="GET" action="{{ url_for('enter_scores') }}" class="mb-4">
-                <div class="mb-3">
-                    <label for="roster_id" class="form-label">Select Week</label>
-                    <div class="input-group">
-                        <select name="roster_id" id="roster_id" class="form-select form-select-lg">
-                            <option value="">-- Choose a Date --</option>
-                            {% for entry in roster %}
-                                <option value="{{ entry.id }}" {% if entry.id|string == selected_id %}selected{% endif %}>
-                                    {{ entry.date }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <button class="btn btn-primary" type="submit">Load</button>
-                    </div>
-                </div>
-            </form>
+        <form method="POST" class="space-y-8">
+            <!-- Week Selection -->
+            <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
+                <label class="block text-sm font-semibold text-indigo-900 uppercase tracking-wider mb-2">Select Game Date</label>
+                <select name="roster_id" onchange="window.location.href='?roster_id=' + this.value" class="w-full p-3 rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg">
+                    <option value="">-- Choose a Week --</option>
+                    {% for r in roster %}
+                    <option value="{{ r.id }}" {% if r.id|string == selected_id %}selected{% endif %}>
+                        {{ r.date }} (Off: {{ r.off }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
 
             {% if entry %}
-            <hr>
-            <form method="POST" action="{{ url_for('enter_scores') }}">
-                <input type="hidden" name="roster_id" value="{{ entry.id }}">
-                
-                <h4 class="mb-3">Bowling Scores</h4>
-                <div class="mb-4">
-                    {% set players = [entry.p1, entry.p2, entry.p3, entry.p4] %}
-                    {% for player in players %}
-                    <div class="player-row">
-                        <span class="player-name">{{ player }}</span>
-                        <input type="number" name="score_{{ loop.index0 }}" class="form-control form-control-lg score-input" placeholder="0" required>
+            <div class="space-y-8">
+                {% for g in range(1, 4) %}
+                <div class="bg-white border-2 border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <h3 class="text-xl font-bold text-indigo-600 mb-4 flex items-center">
+                        <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">Game {{ g }}</span>
+                        Bowling Scores
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        {% set players = [entry.p1, entry.p2, entry.p3, entry.p4] %}
+                        {% for p in players %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <span class="font-medium text-gray-700">{{ p }}</span>
+                            <input type="number" name="score_{{ g }}_{{ loop.index0 }}" placeholder="Score" 
+                                   class="w-24 p-2 text-center rounded border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 font-bold">
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
 
-                <h4 class="mb-3">Card Game</h4>
-                <div class="mb-4">
-                    <label for="card_winner" class="form-label">Winner</label>
-                    <input type="text" name="card_winner" id="card_winner" class="form-control form-control-lg" placeholder="Enter name" required>
+                    <div class="pt-4 border-t border-gray-100">
+                        <label class="block text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">Card Game Winner</label>
+                        <input type="text" name="card_winner_{{ g }}" placeholder="Who won the card game?" 
+                               class="w-full p-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 font-medium">
+                    </div>
                 </div>
+                {% endfor %}
 
-                <button type="submit" class="btn btn-success btn-save">Save Results</button>
-            </form>
+                <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xl rounded-xl shadow-lg transition duration-300 transform hover:scale-[1.02]">
+                    Save All Results
+                </button>
+            </div>
             {% else %}
-            <div class="text-center text-muted mt-4">
-                <p>Please select a week to enter scores.</p>
+            <div class="text-center py-12 text-gray-400 italic">
+                Please select a week from the dropdown above to enter results.
             </div>
             {% endif %}
+        </form>
 
-            <div class="text-center mt-4">
-                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-            </div>
+        <div class="mt-8 text-center">
+            <a href="{{ url_for('admin_dashboard') }}" class="text-indigo-600 hover:underline font-medium">← Back to Dashboard</a>
         </div>
     </div>
 </body>

@@ -27,24 +27,26 @@ def init_db():
             )
         ''')
         
-        # Scores table
+        # Scores table - Added game_number
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 roster_id INTEGER NOT NULL,
                 player_name TEXT NOT NULL,
                 score INTEGER NOT NULL,
+                game_number INTEGER NOT NULL,
                 FOREIGN KEY (roster_id) REFERENCES roster (id) ON DELETE CASCADE
             )
         ''')
         
-        # Winners table
+        # Winners table - Added game_number
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS winners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 roster_id INTEGER NOT NULL,
                 winner_name TEXT NOT NULL,
                 game_type TEXT NOT NULL,
+                game_number INTEGER NOT NULL,
                 FOREIGN KEY (roster_id) REFERENCES roster (id) ON DELETE CASCADE
             )
         ''')
@@ -76,24 +78,24 @@ def update_roster_entry(roster_id, **kwargs):
         conn.commit()
         return cursor.rowcount > 0
 
-def save_score(roster_id, player_name, score):
-    """Saves a score for a specific player in a roster entry."""
+def save_score(roster_id, player_name, score, game_number):
+    """Saves a score for a specific player and game in a roster entry."""
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO scores (roster_id, player_name, score)
-            VALUES (?, ?, ?)
-        ''', (roster_id, player_name, score))
+            INSERT INTO scores (roster_id, player_name, score, game_number)
+            VALUES (?, ?, ?, ?)
+        ''', (roster_id, player_name, score, game_number))
         conn.commit()
 
-def save_winner(roster_id, winner_name, game_type):
-    """Records the winner of a game for a specific roster entry."""
+def save_winner(roster_id, winner_name, game_type, game_number):
+    """Records the winner of a specific game for a roster entry."""
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO winners (roster_id, winner_name, game_type)
-            VALUES (?, ?, ?)
-        ''', (roster_id, winner_name, game_type))
+            INSERT INTO winners (roster_id, winner_name, game_type, game_number)
+            VALUES (?, ?, ?, ?)
+        ''', (roster_id, winner_name, game_type, game_number))
         conn.commit()
 
 def get_roster_by_id(roster_id):
