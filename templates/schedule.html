@@ -32,6 +32,8 @@
                         <th class="p-4 font-bold">Player 2</th>
                         <th class="p-4 font-bold">Player 3</th>
                         <th class="p-4 font-bold">Player 4</th>
+                        <th class="p-4 font-bold">Bowling Scores</th>
+                        <th class="p-4 font-bold">Poker Winner</th>
                         <th class="p-4 rounded-tr-lg font-bold text-red-300">Night Off</th>
                     </tr>
                 </thead>
@@ -39,16 +41,28 @@
                     {% for week in roster %}
                     <tr class="transition-colors {% if week.status == 'current' %}bg-yellow-50 ring-2 ring-inset ring-yellow-400{% elif week.status == 'past' %}bg-gray-100 opacity-60{% else %}hover:bg-gray-50{% endif %}">
                         <td class="p-4 font-medium text-gray-900">
-                            {{ week.Date }}
+                            {{ week.date }}
                             {% if week.status == 'current' %}
                             <span class="ml-2 text-xs font-bold text-yellow-600 uppercase">This Week</span>
                             {% endif %}
                         </td>
-                        <td class="p-4 text-gray-600">{{ week['Player 1'] }}</td>
-                        <td class="p-4 text-gray-600">{{ week['Player 2'] }}</td>
-                        <td class="p-4 text-gray-600">{{ week['Player 3'] }}</td>
-                        <td class="p-4 text-gray-600">{{ week['Player 4'] }}</td>
-                        <td class="p-4 font-bold text-red-500">{{ week.Off }}</td>
+                        <td class="p-4 text-gray-600">{{ week.p1 }}</td>
+                        <td class="p-4 text-gray-600">{{ week.p2 }}</td>
+                        <td class="p-4 text-gray-600">{{ week.p3 }}</td>
+                        <td class="p-4 text-gray-600">{{ week.p4 }}</td>
+                        <td class="p-4 text-sm text-gray-600">
+                            {% if week.scores %}
+                                {% for player, score in week.scores.items() %}
+                                    <span class="inline-block mr-2">{{ player }}: <strong>{{ score }}</strong></span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-gray-400 italic">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 text-gray-900 font-semibold">
+                            {{ week.card_winner if week.card_winner else '—' }}
+                        </td>
+                        <td class="p-4 font-bold text-red-500">{{ week.off }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -60,20 +74,39 @@
             {% for week in roster %}
             <div class="rounded-xl p-4 text-left shadow-sm transition-all {% if week.status == 'current' %}bg-yellow-50 border-2 border-yellow-400{% elif week.status == 'past' %}bg-gray-100 border border-gray-200 opacity-60{% else %}bg-gray-50 border border-gray-200{% endif %}">
                 <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-3">
-                    <div>
-                        <span class="font-bold text-gray-900">{{ week.Date }}</span>
+                    <div class="flex items-center">
+                        <span class="font-bold text-gray-900">{{ week.date }}</span>
                         {% if week.status == 'current' %}
                         <span class="ml-2 text-xs font-bold text-yellow-600 uppercase">This Week</span>
                         {% endif %}
                     </div>
-                    <span class="text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded uppercase">Off: {{ week.Off }}</span>
+                    <span class="text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded uppercase">Off: {{ week.off }}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="text-sm text-gray-600">🎳 {{ week['Player 1'] }}</div>
-                    <div class="text-sm text-gray-600">🎳 {{ week['Player 2'] }}</div>
-                    <div class="text-sm text-gray-600">🎳 {{ week['Player 3'] }}</div>
-                    <div class="text-sm text-gray-600">🎳 {{ week['Player 4'] }}</div>
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="text-sm text-gray-600">🎳 {{ week.p1 }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week.p2 }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week.p3 }}</div>
+                    <div class="text-sm text-gray-600">🎳 {{ week.p4 }}</div>
                 </div>
+                {% if week.scores or week.card_winner %}
+                <div class="bg-white/50 rounded-lg p-3 border border-gray-100 space-y-2">
+                    <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Results</div>
+                    <div class="text-sm text-gray-700">
+                        <span class="font-medium">Bowling:</span>
+                        {% if week.scores %}
+                            {% for player, score in week.scores.items() %}
+                                {{ player }}({{ score }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-gray-400 italic">No scores recorded</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <span class="font-medium">🃏 Winner:</span>
+                        <span class="text-indigo-600 font-bold">{{ week.card_winner if week.card_winner else '—' }}</span>
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
             {% if not roster %}

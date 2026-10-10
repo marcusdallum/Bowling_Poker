@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Roster - Duluth Majors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full">
+        
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900">Edit Roster</h1>
+                <p class="text-indigo-600 font-semibold">Manage Weekly Pairings</p>
+            </div>
+            <a href="{{ url_for('admin_dashboard') }}" class="text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors">
+                &larr; Dashboard
+            </a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} font-medium">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Add New Entry Form -->
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-10">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">{{ 'Edit Week' if entry else 'Add New Week' }}</h2>
+            <form action="{{ url_for('edit_roster') }}" method="POST" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <input type="hidden" name="id" value="{{ entry.id if entry else '' }}">
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" name="date" value="{{ entry.date if entry else '' }}" required class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Player 1</label>
+                    <input type="text" name="p1" value="{{ entry.p1 if entry else '' }}" placeholder="Name" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Player 2</label>
+                    <input type="text" name="p2" value="{{ entry.p2 if entry else '' }}" placeholder="Name" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Player 3</label>
+                    <input type="text" name="p3" value="{{ entry.p3 if entry else '' }}" placeholder="Name" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Player 4</label>
+                    <input type="text" name="p4" value="{{ entry.p4 if entry else '' }}" placeholder="Name" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1">Off</label>
+                    <input type="text" name="off" value="{{ entry.off if entry else '' }}" placeholder="Name" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="sm:col-span-2 md:col-span-3 mt-2 flex gap-2">
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg">
+                        Save Entry
+                    </button>
+                    {% if entry %}
+                    <a href="{{ url_for('edit_roster') }}" class="w-full sm:w-auto px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Roster List -->
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Existing Schedule</h2>
+            {% for entry in roster %}
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-lg font-bold text-gray-900">{{ entry.date }}</span>
+                        {% if entry.id %}
+                        <span class="text-xs text-gray-400">#{{ entry.id }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
+                        <div class="text-gray-600"><span class="font-semibold">P1:</span> {{ entry.p1 }}</div>
+                        <div class="text-gray-600"><span class="font-semibold">P2:</span> {{ entry.p2 }}</div>
+                        <div class="text-gray-600"><span class="font-semibold">P3:</span> {{ entry.p3 }}</div>
+                        <div class="text-gray-600"><span class="font-semibold">P4:</span> {{ entry.p4 }}</div>
+                        <div class="text-indigo-600 font-medium"><span class="font-semibold text-gray-600">Off:</span> {{ entry.off }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('edit_roster', entry_id=entry.id) }}" class="w-full sm:w-auto text-center px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-indigo-100 hover:text-indigo-700 transition-colors border border-gray-300">
+                    Edit
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500">
+                No roster entries found.
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-12 pt-8 border-t border-gray-100 flex justify-between items-center">
+            <a href="{{ url_for('serve_index') }}" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">&larr; Back to Home</a>
+            <p class="text-xs text-gray-400">&copy; 2026 KG Construction | Duluth Majors</p>
+        </div>
+    </div>
+</body>
+</html>

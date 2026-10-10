@@ -1,9 +1,30 @@
 import os
 import csv
+import database
 from datetime import datetime, timedelta
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
+
+app.secret_key = 'super-secret-key-change-me' # Required for sessions
+
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+# Hardcoded admin user
+ADMIN_USER = {'id': 'admin', 'password': 'password123'}
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # Redirect users here if they aren't logged in
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id == ADMIN_USER['id']:
+        return User(user_id)
+    return None
 
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -54,6 +75,20 @@ def get_unique_players():
     
     return sorted(list(players))
 
+
+def calculate_averages():
+    """Calculates the average bowling score for each player."""
+    averages = {}
+    try:
+        with database.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT player_name, AVG(score) as average FROM scores GROUP BY player_name')
+            rows = cursor.fetchall()
+            for row in rows:
+                averages[row['player_name']] = round(row['average'], 1)
+    except Exception as e:
+        print(f"Error calculating averages: {e}")
+    return averages
 @app.route("/")
 def serve_index():
     return send_from_directory(STATIC_DIR, "index.html")
@@ -68,16 +103,48 @@ def serve_poker_rules():
 
 @app.route("/schedule")
 def serve_schedule():
-    roster_data = get_roster()
+    # Use database instead of roster.txt
+    roster_data = database.get_all_rosters()
+    
+    today = datetime.now().date()
+    days_to_wednesday = (2 - today.weekday()) % 7
+    this_wednesday = today + timedelta(days=days_to_wednesday)
+    
+    processed_roster = []
+    for row in roster_data:
+        # Convert sqlite3.Row to dict for easier manipulation
+        entry = dict(row)
+        game_date = datetime.strptime(entry['date'], "%Y-%m-%d").date()
+        
+        if game_date < this_wednesday:
+            status = 'past'
+        elif game_date == this_wednesday:
+            status = 'current'
+        else:
+            status = 'future'
+        
+        entry['status'] = status
+        
+        # Fetch scores and winners
+        scores = database.get_scores_for_roster(entry['id'])
+        # Create a map of player -> score
+        entry['scores'] = {s['player_name']: s['score'] for s in scores}
+        
+        winners = database.get_winners_for_roster(entry['id'])
+        # We only care about the Card Game winner for now
+        card_winner = next((w['winner_name'] for w in winners if w['game_type'] == 'Card Game'), None)
+        entry['card_winner'] = card_winner
+        
+        processed_roster.append(entry)
     
     # Reorder: Current first, then Future, then Past
-    current = [r for r in roster_data if r['status'] == 'current']
-    future = [r for r in roster_data if r['status'] == 'future']
-    past = [r for r in roster_data if r['status'] == 'past']
+    current = [r for r in processed_roster if r['status'] == 'current']
+    future = [r for r in processed_roster if r['status'] == 'future']
+    past = [r for r in processed_roster if r['status'] == 'past']
     
     # Sort future and past chronologically
-    future.sort(key=lambda x: x['Date'])
-    past.sort(key=lambda x: x['Date'], reverse=True) # Newest past first
+    future.sort(key=lambda x: x['date'])
+    past.sort(key=lambda x: x['date'], reverse=True) # Newest past first
     
     ordered_roster = current + future + past
     
@@ -86,7 +153,116 @@ def serve_schedule():
 @app.route("/meet-the-team")
 def serve_meet_the_team():
     players_list = get_unique_players()
-    return render_template("meet_the_team.html", players=players_list)
+    averages = calculate_averages()
+    return render_template("meet_the_team.html", players=players_list, averages=averages)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == ADMIN_USER["id"] and password == ADMIN_USER["password"]:
+            user = User(username)
+            login_user(user)
+            return redirect(url_for("admin_dashboard"))
+        else:
+            flash("Invalid username or password")
+            return redirect(url_for("login"))
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("serve_index"))
+
+@app.route("/admin")
+@login_required
+def admin_dashboard():
+    return render_template("admin.html")
+
+@app.route("/admin/edit-roster", methods=["GET", "POST"])
+@login_required
+def edit_roster():
+    if request.method == "POST":
+        entry_id = request.form.get("id")
+        date = request.form.get("date")
+        p1 = request.form.get("p1")
+        p2 = request.form.get("p2")
+        p3 = request.form.get("p3")
+        p4 = request.form.get("p4")
+        off = request.form.get("off")
+
+        try:
+            if entry_id:
+                success = database.update_roster_entry(int(entry_id), date=date, p1=p1, p2=p2, p3=p3, p4=p4, off=off)
+                msg = "Entry updated successfully!" if success else "Failed to update entry."
+            else:
+                database.add_roster_entry(date, p1, p2, p3, p4, off)
+                msg = "New entry added successfully!"
+            
+            flash(msg, "success" if "successfully" in msg else "error")
+        except Exception as e:
+            flash(f"Error saving entry: {str(e)}", "error")
+        
+        return redirect(url_for("edit_roster"))
+
+    # GET request
+    entry_id = request.args.get("entry_id")
+    editing_entry = None
+    if entry_id:
+        editing_entry = database.get_roster_by_id(int(entry_id))
+    
+    roster = database.get_all_rosters()
+    return render_template("admin_roster.html", roster=roster, entry=editing_entry)
+
+@app.route("/admin/enter-scores", methods=["GET", "POST"])
+@login_required
+def enter_scores():
+    if request.method == "POST":
+        roster_id = request.form.get("roster_id")
+        card_winner = request.form.get("card_winner")
+        
+        if not roster_id:
+            flash("Please select a week.", "error")
+            return redirect(url_for("enter_scores"))
+            
+        try:
+            roster_id = int(roster_id)
+            entry = database.get_roster_by_id(roster_id)
+            if not entry:
+                flash("Roster entry not found.", "error")
+                return redirect(url_for("enter_scores"))
+            
+            # Get players in order
+            players = [entry['p1'], entry['p2'], entry['p3'], entry['p4']]
+            
+            # Save bowling scores
+            for i in range(4):
+                score_val = request.form.get(f"score_{i}")
+                if score_val is not None:
+                    database.save_score(roster_id, players[i], int(score_val))
+            
+            # Save card game winner
+            if card_winner:
+                database.save_winner(roster_id, card_winner, "Card Game")
+                
+            flash("Results saved successfully!", "success")
+        except Exception as e:
+            flash(f"Error saving results: {str(e)}", "error")
+            
+        return redirect(url_for("enter_scores"))
+
+    # GET request
+    selected_id = request.args.get("roster_id")
+    entry = None
+    if selected_id:
+        entry = database.get_roster_by_id(int(selected_id))
+    
+    roster = database.get_all_rosters()
+    return render_template("admin_results.html", roster=roster, entry=entry, selected_id=selected_id)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
