@@ -81,6 +81,8 @@
                 <p class="text-sm text-gray-500 mb-2">Upload a CSV file to add multiple roster entries.</p>
                 <input type="file" name="file" accept=".csv" required class="mb-2 w-full" />
                 <button type="submit" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Upload</button>
++                <p class="text-sm text-gray-500 mt-2"><a href="{{ url_for('static', filename='example_roster.csv') }}" download class="text-indigo-600 hover:underline">Download example CSV</a></p>
+
             </form>
         </div>
 
