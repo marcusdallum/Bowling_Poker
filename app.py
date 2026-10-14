@@ -23,7 +23,7 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     # Use env var for the admin username
-    if user_id == os.environ.get('ADMIN_USER_ID', 'admin'):
+    if user_id == os.environ['ADMIN_USER_ID']:
         return User(user_id)
     return None
 
@@ -135,7 +135,7 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        admin_id = os.environ.get('ADMIN_USER_ID', 'admin')
+        admin_id = os.environ['ADMIN_USER_ID']
         admin_hash = os.environ.get('ADMIN_PASSWORD_HASH')
         if username == admin_id and admin_hash and check_password_hash(admin_hash, password):
             user = User(username)
