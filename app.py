@@ -10,7 +10,7 @@ from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-change-me')
+app.secret_key = os.environ['FLASK_SECRET_KEY']
 
 class User(UserMixin):
     def __init__(self, id):
@@ -227,4 +227,4 @@ def enter_scores():
     return render_template("admin_results.html", roster=roster, entry=entry, selected_id=selected_id)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
