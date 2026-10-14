@@ -28,10 +28,7 @@
                 <thead>
                     <tr class="bg-indigo-600 text-white">
                         <th class="p-4 rounded-tl-lg font-bold">Date</th>
-                        <th class="p-4 font-bold">Player 1</th>
-                        <th class="p-4 font-bold">Player 2</th>
-                        <th class="p-4 font-bold">Player 3</th>
-                        <th class="p-4 font-bold">Player 4</th>
+                        <th class="p-4 font-bold">Players</th>
                         <th class="p-4 font-bold">Bowling Scores</th>
                         <th class="p-4 font-bold">Poker Winner</th>
                         <th class="p-4 rounded-tr-lg font-bold text-red-300">Night Off</th>
@@ -46,10 +43,7 @@
                             <span class="ml-2 text-xs font-bold text-yellow-600 uppercase">This Week</span>
                             {% endif %}
                         </td>
-                        <td class="p-4 text-gray-600">{{ week.p1 }}</td>
-                        <td class="p-4 text-gray-600">{{ week.p2 }}</td>
-                        <td class="p-4 text-gray-600">{{ week.p3 }}</td>
-                        <td class="p-4 text-gray-600">{{ week.p4 }}</td>
+                        <td class="p-4 text-gray-600"><ul class="list-disc pl-5"><% for player in week.players %><li>{{ player }}</li><% endfor %></ul></td>
                         <td class="p-4 text-sm text-gray-600">
                             {% if week.scores %}
                                 {% for player, score in week.scores.items() %}

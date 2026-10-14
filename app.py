@@ -103,6 +103,10 @@ def serve_schedule():
     processed_roster = []
     for row in roster_data:
         entry = dict(row)
+        # fetch players list
+        entry['players'] = database.get_roster_players(entry['id'])
+        # use off column as is
+        entry['off'] = entry.get('off')
         game_date = datetime.strptime(entry['date'], "%Y-%m-%d").date()
         if game_date < this_wednesday:
             status = 'past'
@@ -164,7 +168,9 @@ MAX_CSV_SIZE = 5 * 1024 * 1024  # 5 MiB limit
 @app.route("/admin/import-roster", methods=["POST"])
 @login_required
 def import_roster():
-    """Handle CSV roster imports with validation and atomic DB transaction."""
+    """Handle CSV roster imports, supporting legacy (p1‑p4,off) and new (players) columns.
+    Duplicate dates are ignored. Returns to admin dashboard with a flash message.
+    """
     # 1. Ensure a file was submitted
     if "file" not in request.files:
         flash("No file part", "error")
@@ -185,13 +191,19 @@ def import_roster():
         flash(f"File too large ({size} bytes). Maximum allowed is {MAX_CSV_SIZE} bytes.", "error")
         return redirect(url_for("admin_dashboard"))
 
-    # Parse CSV and prepare for import
+    # 3. Parse CSV
     try:
         raw = file.read()
         text = raw.decode('utf-8')
         reader = csv.DictReader(text.splitlines())
-        required = {'date', 'p1', 'p2', 'p3', 'p4', 'off'}
         header = set((h.lower() for h in (reader.fieldnames or [])))
+        if {'date', 'players'}.issubset(header):
+            required = {'date', 'players'}
+        elif {'date', 'p1', 'p2', 'p3', 'p4', 'off'}.issubset(header):
+            required = {'date', 'p1', 'p2', 'p3', 'p4', 'off'}
+        else:
+            flash("CSV missing required columns.", "error")
+            return redirect(url_for("admin_dashboard"))
         if not required.issubset(header):
             flash("CSV missing required columns.", "error")
             return redirect(url_for("admin_dashboard"))
@@ -199,26 +211,30 @@ def import_roster():
         flash(f"Error reading CSV: {e}", "error")
         return redirect(url_for("admin_dashboard"))
 
-    # Insert rows with duplicate detection
+    # 4. Insert rows (date‑unique)
     success = 0
-    # Use a connection for duplicate checks (no transaction needed)
     with database.get_connection() as conn:
         for row in reader:
-            # Check for existing identical roster entry
-            dup = conn.execute(
-                "SELECT 1 FROM roster WHERE date = ? AND p1 = ? AND p2 = ? AND p3 = ? AND p4 = ? AND off = ?",
-                (row['date'], row['p1'], row['p2'], row['p3'], row['p4'], row['off'])
-            ).fetchone()
-            if dup:
+            # Skip if a roster for this date already exists
+            exists = conn.execute("SELECT 1 FROM roster WHERE date = ?", (row['date'],)).fetchone()
+            if exists:
                 continue
             try:
-                database.add_roster_entry(
-                    row['date'], row['p1'], row['p2'], row['p3'], row['p4'], row['off']
-                )
+                if 'players' in row:
+                    players = [p.strip() for p in row['players'].split(';') if p.strip()]
+                    off = row.get('off')
+                    database.add_roster_with_players(row['date'], players, off)
+                else:
+                    database.add_roster_entry(
+                        row['date'], row['p1'], row['p2'], row['p3'], row['p4'], row['off']
+                    )
                 success += 1
             except Exception:
-                # Skip rows that cause errors
                 continue
+    flash(f"Successfully imported {success} entries", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
 
 
     flash(f"Successfully imported {success} entries", "success")
@@ -272,16 +288,20 @@ def enter_scores():
             if not entry:
                 flash("Roster entry not found.", "error")
                 return redirect(url_for("enter_scores"))
-            players = [entry['p1'], entry['p2'], entry['p3'], entry['p4']]
+            # Update enter_scores view to use flexible player list
+            players = database.get_roster_players(entry['id'])
             for g in range(1, 4):
-                for i in range(4):
+                # iterate over players; handle possible fewer than 4
+                for i, player in enumerate(players):
                     score_val = request.form.get(f"score_{g}_{i}")
-                    if score_val is not None and score_val != '':
-                        database.save_score(roster_id, players[i], int(score_val), g)
+                    if score_val:
+                        database.save_score(roster_id, player, int(score_val), g)
+                # Card game winner per game
                 card_winner = request.form.get(f"card_winner_{g}")
                 if card_winner:
                     database.save_winner(roster_id, card_winner, "Card Game", g)
             flash("Results for all 3 games saved successfully!", "success")
+
         except Exception as e:
             flash(f"Error saving results: {str(e)}", "error")
         return redirect(url_for("enter_scores"))
