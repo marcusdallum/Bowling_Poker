@@ -5,6 +5,7 @@ import csv
 import database
 from datetime import datetime, timedelta
 from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash
+import io
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash
 
@@ -156,6 +157,72 @@ def logout():
 @login_required
 def admin_dashboard():
     return render_template("admin.html")
+
+# --- CSV Roster Import Route -------------------------------------------------
+MAX_CSV_SIZE = 5 * 1024 * 1024  # 5 MiB limit
+
+@app.route("/admin/import-roster", methods=["POST"])
+@login_required
+def import_roster():
+    """Handle CSV roster imports with validation and atomic DB transaction."""
+    # 1. Ensure a file was submitted
+    if "file" not in request.files:
+        flash("No file part", "error")
+        return redirect(url_for("admin_dashboard"))
+    file = request.files["file"]
+    if file.filename == "":
+        flash("No selected file", "error")
+        return redirect(url_for("admin_dashboard"))
+    if not file.filename.lower().endswith('.csv'):
+        flash("Invalid file format. Please upload a CSV.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    # 2. Size guard
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_CSV_SIZE:
+        flash(f"File too large ({size} bytes). Maximum allowed is {MAX_CSV_SIZE} bytes.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    # Parse CSV and prepare for import
+    try:
+        raw = file.read()
+        text = raw.decode('utf-8')
+        reader = csv.DictReader(text.splitlines())
+        required = {'date', 'p1', 'p2', 'p3', 'p4', 'off'}
+        header = set((h.lower() for h in (reader.fieldnames or [])))
+        if not required.issubset(header):
+            flash("CSV missing required columns.", "error")
+            return redirect(url_for("admin_dashboard"))
+    except Exception as e:
+        flash(f"Error reading CSV: {e}", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    # Insert rows with duplicate detection
+    success = 0
+    # Use a connection for duplicate checks (no transaction needed)
+    with database.get_connection() as conn:
+        for row in reader:
+            # Check for existing identical roster entry
+            dup = conn.execute(
+                "SELECT 1 FROM roster WHERE date = ? AND p1 = ? AND p2 = ? AND p3 = ? AND p4 = ? AND off = ?",
+                (row['date'], row['p1'], row['p2'], row['p3'], row['p4'], row['off'])
+            ).fetchone()
+            if dup:
+                continue
+            try:
+                database.add_roster_entry(
+                    row['date'], row['p1'], row['p2'], row['p3'], row['p4'], row['off']
+                )
+                success += 1
+            except Exception:
+                # Skip rows that cause errors
+                continue
+
+
+    flash(f"Successfully imported {success} entries", "success")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/edit-roster", methods=["GET", "POST"])
 @login_required
